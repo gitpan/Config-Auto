@@ -3,13 +3,14 @@ package Config::Auto;
 use strict;
 use warnings;
 use File::Spec::Functions;
+use File::Basename;
 #use XML::Simple;   # this is now optional
 use Config::IniFiles;
 use Carp;
 
 use vars qw[$VERSION $DisablePerl];
 
-$VERSION = '0.04';
+$VERSION = '0.05';
 $DisablePerl = 0;
 
 my %methods = (
@@ -129,10 +130,12 @@ sub score {
 
 sub find_file {
     my $x;
-    my $whoami = $0;
+    my $whoami = basename($0);
+    my $bindir = dirname($0);
     $whoami =~ s/\.pl$//;
     for ("${whoami}config", "${whoami}.config", "${whoami}rc", ".${whoami}rc") {
         return $_           if -e $_;
+        return $x           if -e ($x=catfile($bindir,$_));
         return $x           if -e ($x=catfile($ENV{HOME},$_));
         return "/etc/$_"    if -e "/etc/$_";
     }

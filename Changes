@@ -1,3 +1,8 @@
+0.05    Tue Feb 10 13:16:59 2004
+===================================
+    - Fix so that a config file is magically found when the program
+        is started with a full pathname as well
+
 0.04    Sun Sep  7 19:28:40 2003
 ====================================
     - Jos Boumans took maintainership
