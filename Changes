@@ -1,11 +1,17 @@
-Revision history for Perl extension Config::Auto.
+0.04    Sun Sep  7 19:28:40 2003
+====================================
+    - Jos Boumans took maintainership
+    - XML::Simple is now an optional module
 
-0.03  Sun Aug  4 09:51:42 BST 2002
+0.03    Sun Aug  4 09:51:42 2002
+====================================
     - INI files patch by Garrett Rooney
 
-0.02  Thu Jul  4 17:20:13 BST 2002
+0.02    Thu Jul  4 17:20:13 2002
+====================================
     - I always screw up the README.
 
+====================================
 0.01  Wed Jul  3 15:00:16 2002
 	- original version; created by h2xs 1.21 with options
 		-AX -n Config::Auto

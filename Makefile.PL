@@ -1,14 +1,32 @@
 use ExtUtils::MakeMaker;
-# See lib/ExtUtils/MakeMaker.pm for details of how to influence
-# the contents of the Makefile that is written.
+
+use strict;
+use Getopt::Std;
+use Data::Dumper;
+my $opts = {};
+getopts( 'x', $opts );
+
+my $have_xml_simple = eval { require XML::Simple; 1; };
+
+if( !$have_xml_simple and !$opts->{'x'} ) {
+    warn qq[Since the 0.04 release, XML::Simple is an optional prerequisite.\n].
+         qq[If you'd like to install Config::Auto with XML support, please\n] .
+         qq[rerun this Makefile.PL with the '-x' option\n];
+}
+
+my $prereqs = {
+    'XML::Simple'       => 0,
+    'Config::IniFiles'  => 0,
+};
+delete $prereqs->{'XML::Simple'} unless $opts->{'x'};             
+
 WriteMakefile(
-    'NAME'		=> 'Config::Auto',
-    'VERSION_FROM'	=> 'Auto.pm', # finds $VERSION
-    'PREREQ_PM'		=> {
-        XML::Simple => 0,
-        Config::IniFiles => 0
-        }, # e.g., Module::Name => 1.1
-    ($] >= 5.005 ?    ## Add these new keywords supported since 5.005
-      (ABSTRACT_FROM => 'Auto.pm', # retrieve abstract from module
-       AUTHOR     => 'Simon Cozens <simon@cpan.org>') : ()),
+    'NAME'		        => 'Config::Auto',
+    'VERSION_FROM'	    => 'lib/Config/Auto.pm', # finds $VERSION
+    'PREREQ_PM'		    => $prereqs, 
+    ( $] >= 5.005 
+        ? ( ABSTRACT_FROM    => 'lib/Config/Auto.pm', # retrieve abstract from module
+            AUTHOR           => 'Jos I. Boumans <kane@cpan.org>') 
+        : ()
+    ),
 );

@@ -1,15 +1,16 @@
 package Config::Auto;
 
-use 5.006;
 use strict;
 use warnings;
 use File::Spec::Functions;
-use XML::Simple;
+#use XML::Simple;   # this is now optional
 use Config::IniFiles;
 use Carp;
 
-our $VERSION = '0.03';
-our $DisablePerl = 0;
+use vars qw[$VERSION $DisablePerl];
+
+$VERSION = '0.04';
+$DisablePerl = 0;
 
 my %methods = (
     perl   => \&eval_perl,
@@ -23,11 +24,15 @@ my %methods = (
     list   => \&return_list,
 );
 
+delete $methods{'xml'} 
+    unless eval { require XML::Simple; XML::Simple->import; 1 };
+
 sub parse {
     my $file = shift;
     my %args = @_;
-    $file = find_file() if not defined $file;
-    croak "No config filename given!" if not defined $file;
+    
+    $file = find_file()                     if not defined $file;
+    croak "No config filename given!"       if not defined $file;
     croak "Config file $file not readable!" if not -e $file; 
 
     return if -B $file;
@@ -68,48 +73,53 @@ sub parse {
 
 sub score {
     my $data_r = shift;
-    return (xml => 100) if $data_r->[0] =~ /^\s*<\?xml/;
-    return (perl => 100) if $data_r->[0] =~ /^#!.*perl/;
+    return (xml => 100)     if $data_r->[0] =~ /^\s*<\?xml/;
+    return (perl => 100)    if $data_r->[0] =~ /^#!.*perl/;
     my %score;
+    
     for (@$data_r) {
         # Easy to comment out foo=bar syntax
-        $score{equal}++ if /^\s*#\s*\w+\s*=/;
+        $score{equal}++                 if /^\s*#\s*\w+\s*=/;
         next if /^\s*#/;
-        $score{xml}++    for /(<\w+.*?>)/g;
-        $score{xml}+= 2  for m|(</\w+.*?>)|g;
-        $score{xml}+= 5  for m|(/>)|g;
+        
+        $score{xml}++                   for /(<\w+.*?>)/g;
+        $score{xml}+= 2                 for m|(</\w+.*?>)|g;
+        $score{xml}+= 5                 for m|(/>)|g;
         next unless /\S/;
-        $score{equal}++, $score{ini}++ if m|^.*=.*$|;
-        $score{equal}++, $score{ini}++ if m|^\S+\s+=\s+|;
-        $score{colon}++ if /^[^:]+:[^:=]+/;
-        $score{colon}+=2 if /^\s*\w+\s*:[^:]+$/;
-        $score{colonequal}+= 3 if /^\s*\w+\s*:=[^:]+$/; # Debian foo.
-        $score{perl}+= 10 if /^\s*\$\w+(\{.*?\})*\s*=.*/;
-        $score{space}++ if m|^[^\s:]+\s+\S+$|;
+        
+        $score{equal}++, $score{ini}++  if m|^.*=.*$|;
+        $score{equal}++, $score{ini}++  if m|^\S+\s+=\s+|;
+        $score{colon}++                 if /^[^:]+:[^:=]+/;
+        $score{colon}+=2                if /^\s*\w+\s*:[^:]+$/;
+        $score{colonequal}+= 3          if /^\s*\w+\s*:=[^:]+$/; # Debian foo.
+        $score{perl}+= 10               if /^\s*\$\w+(\{.*?\})*\s*=.*/;
+        $score{space}++                 if m|^[^\s:]+\s+\S+$|;
+        
         # mtab, fstab, etc.
-        $score{space}++ if m|^(\S+)\s+(\S+\s*)+|;
-        $score{bind}+= 5 if /\s*\S+\s*{$/;
-        $score{list}++ if /^[\w\/\-\+]+$/;
-        $score{bind}+= 5 if /^\s*}\s*$/ and exists $score{bind};
-        $score{irssi}+= 5 if /^\s*};\s*$/ and exists $score{irssi};
-        $score{irssi}+= 10 if /(\s*|^)\w+\s*=\s*{/;
-        $score{perl}++ if /\b([@%\$]\w+)/g;
-        $score{perl}+= 2 if /;\s*$/;
-        $score{perl}+=10 if /(if|for|while|until|unless)\s*\(/;
-        $score{perl}++ for /([\{\}])/g;
-        $score{equal}++, $score{ini}++ if m|^\s*\w+\s*=.*$|;
-        $score{ini} += 10 if /^\s*\[[\s\w]+\]\s*$/;
+        $score{space}++                 if m|^(\S+)\s+(\S+\s*)+|;
+        $score{bind}+= 5                if /\s*\S+\s*{$/;
+        $score{list}++                  if /^[\w\/\-\+]+$/;
+        $score{bind}+= 5                if /^\s*}\s*$/  and exists $score{bind};
+        $score{irssi}+= 5               if /^\s*};\s*$/ and exists $score{irssi};
+        $score{irssi}+= 10              if /(\s*|^)\w+\s*=\s*{/;
+        $score{perl}++                  if /\b([@%\$]\w+)/g;
+        $score{perl}+= 2                if /;\s*$/;
+        $score{perl}+=10                if /(if|for|while|until|unless)\s*\(/;
+        $score{perl}++                  for /([\{\}])/g;
+        $score{equal}++, $score{ini}++  if m|^\s*\w+\s*=.*$|;
+        $score{ini} += 10               if /^\s*\[[\s\w]+\]\s*$/;
     }
 
     # Choose between Win INI format and foo = bar
     if (exists $score{ini}) {
-        if ($score{ini} > $score{equal}) { delete $score{equal} }
-        else { delete $score{ini} }
+        $score{ini} > $score{equal}
+            ? delete $score{equal}
+            : delete $score{ini};
     }
 
     # Some general sanity checks
     if (exists $score{perl}) {
-        $score{perl} /= 2 unless ("@$data_r" =~ tr/;//) > 3 or $#$data_r < 3;
+        $score{perl} /= 2   unless ("@$data_r" =~ tr/;//) > 3 or $#$data_r < 3;
         delete $score{perl} unless ("@$data_r" =~ tr/;//);
         delete $score{perl} unless ("@$data_r" =~ /([\$\@\%]\w+)/);
     }
@@ -122,19 +132,19 @@ sub find_file {
     my $whoami = $0;
     $whoami =~ s/\.pl$//;
     for ("${whoami}config", "${whoami}.config", "${whoami}rc", ".${whoami}rc") {
-        return $_ if -e $_;
-        return $x if -e ($x=catfile($ENV{HOME},$_));
-        return "/etc/$_" if -e "/etc/$_";
+        return $_           if -e $_;
+        return $x           if -e ($x=catfile($ENV{HOME},$_));
+        return "/etc/$_"    if -e "/etc/$_";
     }
     return undef;
 }
 
-sub eval_perl { do $_[0]; }
-sub parse_xml { return XMLin(shift); }
-sub parse_ini { tie my %ini, 'Config::IniFiles', (-file=>$_[0]); return \%ini; }
+sub eval_perl   { do $_[0]; }
+sub parse_xml   { return XMLin(shift); }
+sub parse_ini   { tie my %ini, 'Config::IniFiles', (-file=>$_[0]); return \%ini; }
 sub return_list { open my $fh, shift or die $!; return [<$fh>]; }
 
-sub bind_style { croak "BIND8-style config not supported in this release" }
+sub bind_style  { croak "BIND8-style config not supported in this release" }
 sub irssi_style { croak "irssi-style config not supported in this release" }
 
 # BUG: These functions are too similar. How can they be unified?
@@ -350,10 +360,16 @@ good to add support for C<mutt> and C<vim> style C<set>-based RCs.
 
 =head1 AUTHOR
 
-Simon Cozens, C<simon@cpan.org>
+This module by Jos Boumans, C<kane@cpan.org>.
 
 =head1 LICENSE
 
-AL&GPL.
+This module is
+copyright (c) 2003 Jos Boumans E<lt>kane@cpan.orgE<gt>.
+All rights reserved.
+
+This library is free software;
+you may redistribute and/or modify it under the same
+terms as Perl itself.
 
 =cut
