@@ -10,7 +10,7 @@ use Carp;
 
 use vars qw[$VERSION $DisablePerl];
 
-$VERSION = '0.10';
+$VERSION = '0.11';
 $DisablePerl = 0;
 
 my %methods = (
@@ -32,7 +32,7 @@ sub parse {
     my $file = shift;
     my %args = @_;
     
-    $file = find_file($file)                if not defined $file and 
+    $file = find_file($file)                if not defined $file or 
                                                not -e $file;
     croak "No config file found!"           if not defined $file;
     croak "Config file $file not readable!" if not -e $file; 
