@@ -10,7 +10,7 @@ use Carp;
 
 use vars qw[$VERSION $DisablePerl];
 
-$VERSION = '0.06';
+$VERSION = '0.10';
 $DisablePerl = 0;
 
 my %methods = (
@@ -32,8 +32,9 @@ sub parse {
     my $file = shift;
     my %args = @_;
     
-    $file = find_file()                     if not defined $file;
-    croak "No config filename given!"       if not defined $file;
+    $file = find_file($file)                if not defined $file and 
+                                               not -e $file;
+    croak "No config file found!"           if not defined $file;
     croak "Config file $file not readable!" if not -e $file; 
 
     return if -B $file;
@@ -133,11 +134,17 @@ sub find_file {
     my $whoami = basename($0);
     my $bindir = dirname($0);
     $whoami =~ s/\.pl$//;
-    for ("${whoami}config", "${whoami}.config", "${whoami}rc", ".${whoami}rc") {
-        return $_           if -e $_;
-        return $x           if -e ($x=catfile($bindir,$_));
-        return $x           if -e ($x=catfile($ENV{HOME},$_));
-        return "/etc/$_"    if -e "/etc/$_";
+
+    my @options = shift ||
+                    ("${whoami}config", "${whoami}.config", 
+                     "${whoami}rc", ".${whoami}rc");
+
+    for (@options) {
+        return $_                   if -e $_;
+        return $x                   if -e ($x=catfile($bindir,$_));
+        return $x                   if -e ($x=catfile($ENV{HOME},$_));
+        return "/etc/$_"            if -e "/etc/$_";
+        return "/usr/local/etc/$_"  if -e "/usr/local/etc/$_";
     }
     return undef;
 }
@@ -293,16 +300,20 @@ look for the following files:
     snerkconfig
     ~/snerkconfig
     /etc/snerkconfig
+    /usr/local/etc/snerkconfig
     snerk.config
     ~/snerk.config
     /etc/snerk.config
+    /usr/local/etc/snerk.config
     snerkrc
     ~/snerkrc
     /etc/snerkrc
+    /usr/local/etc/snerkrc    
     .snerkrc
     ~/.snerkrc
     /etc/.snerkrc
-
+    /usr/local/etc/.snerkrc
+    
 We take the first one we find, and examine it to determine what format
 it's in. The algorithm used is a heuristic "which is a fancy way of
 saying that it doesn't work." (Mark Dominus.) We know about colon
@@ -355,6 +366,29 @@ F</etc/nsswitch.conf>:
           'hosts' => [ 'files', 'dns' ],
           ...
     };
+
+=head1 PARAMETERS
+
+Although C<Config::Auto> is at its most magical when called with no parameters,
+its behavior can be reigned in by use of one or two arguments.
+
+If a filename is passed as the first argument to C<parse>, the same paths are
+checked, but C<Config::Auto> will look for a file with the passed name instead
+of the C<$0>-based names.
+
+ use Config::Auto;
+
+ my $config = Config::Auto::parse("obscure.conf");
+
+The above call will cause C<Config::Auto> to look for:
+
+ obscure.conf
+ ~/obscure.conf
+ /etc/obscure.conf
+
+Parameters after the first are named, and the only recognize named parameter is
+C<format>, which forces C<Config::Auto> to interpret the contents of the
+configuration file in the given format without trying to guess.
 
 =head1 TODO
 
