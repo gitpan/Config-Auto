@@ -8,7 +8,7 @@ use XML::Simple;
 use Config::IniFiles;
 use Carp;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 our $DisablePerl = 0;
 
 my %methods = (
