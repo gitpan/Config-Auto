@@ -1,3 +1,8 @@
+0.06    Sat Feb 21 13:21:43 2004
+===================================
+    - fix a bug in tr/// on a string
+
+
 0.05    Tue Feb 10 13:16:59 2004
 ===================================
     - Fix so that a config file is magically found when the program

@@ -10,7 +10,7 @@ use Carp;
 
 use vars qw[$VERSION $DisablePerl];
 
-$VERSION = '0.05';
+$VERSION = '0.06';
 $DisablePerl = 0;
 
 my %methods = (
@@ -120,8 +120,8 @@ sub score {
 
     # Some general sanity checks
     if (exists $score{perl}) {
-        $score{perl} /= 2   unless ("@$data_r" =~ tr/;//) > 3 or $#$data_r < 3;
-        delete $score{perl} unless ("@$data_r" =~ tr/;//);
+        $score{perl} /= 2   unless ("@$data_r" =~ /;/) > 3 or $#$data_r < 3;
+        delete $score{perl} unless ("@$data_r" =~ /;/);
         delete $score{perl} unless ("@$data_r" =~ /([\$\@\%]\w+)/);
     }
 
