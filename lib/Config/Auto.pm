@@ -8,10 +8,11 @@ use File::Basename;
 use Config::IniFiles;
 use Carp;
 
-use vars qw[$VERSION $DisablePerl];
+use vars qw[$VERSION $DisablePerl $Untaint];
 
-$VERSION = '0.11';
+$VERSION = '0.12';
 $DisablePerl = 0;
+$Untaint = 0;
 
 my %methods = (
     perl   => \&eval_perl,
@@ -25,17 +26,17 @@ my %methods = (
     list   => \&return_list,
 );
 
-delete $methods{'xml'} 
+delete $methods{'xml'}
     unless eval { require XML::Simple; XML::Simple->import; 1 };
 
 sub parse {
     my $file = shift;
     my %args = @_;
-    
-    $file = find_file($file)                if not defined $file or 
+
+    $file = find_file($file)                if not defined $file or
                                                not -e $file;
     croak "No config file found!"           if not defined $file;
-    croak "Config file $file not readable!" if not -e $file; 
+    croak "Config file $file not readable!" if not -e $file;
 
     return if -B $file;
 
@@ -78,17 +79,17 @@ sub score {
     return (xml => 100)     if $data_r->[0] =~ /^\s*<\?xml/;
     return (perl => 100)    if $data_r->[0] =~ /^#!.*perl/;
     my %score;
-    
+
     for (@$data_r) {
         # Easy to comment out foo=bar syntax
         $score{equal}++                 if /^\s*#\s*\w+\s*=/;
         next if /^\s*#/;
-        
+
         $score{xml}++                   for /(<\w+.*?>)/g;
         $score{xml}+= 2                 for m|(</\w+.*?>)|g;
         $score{xml}+= 5                 for m|(/>)|g;
         next unless /\S/;
-        
+
         $score{equal}++, $score{ini}++  if m|^.*=.*$|;
         $score{equal}++, $score{ini}++  if m|^\S+\s+=\s+|;
         $score{colon}++                 if /^[^:]+:[^:=]+/;
@@ -96,7 +97,7 @@ sub score {
         $score{colonequal}+= 3          if /^\s*\w+\s*:=[^:]+$/; # Debian foo.
         $score{perl}+= 10               if /^\s*\$\w+(\{.*?\})*\s*=.*/;
         $score{space}++                 if m|^[^\s:]+\s+\S+$|;
-        
+
         # mtab, fstab, etc.
         $score{space}++                 if m|^(\S+)\s+(\S+\s*)+|;
         $score{bind}+= 5                if /\s*\S+\s*{$/;
@@ -136,7 +137,7 @@ sub find_file {
     $whoami =~ s/\.pl$//;
 
     my @options = shift ||
-                    ("${whoami}config", "${whoami}.config", 
+                    ("${whoami}config", "${whoami}.config",
                      "${whoami}rc", ".${whoami}rc");
 
     for (@options) {
@@ -149,7 +150,16 @@ sub find_file {
     return undef;
 }
 
-sub eval_perl   { do $_[0]; }
+sub eval_perl   {
+  my $file = shift;
+  ($file) = $file =~ m/^(.*)$/s if $Untaint;
+  my $cfg = do $file;
+  croak __PACKAGE__ . " couldn't parse $file: $@" if $@;
+  croak __PACKAGE__ . " couldn't do $file: $!"    unless defined $cfg;
+  croak __PACKAGE__ . " couldn't run $file"       unless $cfg;
+  return $cfg;
+}
+
 sub parse_xml   { return XMLin(shift); }
 sub parse_ini   { tie my %ini, 'Config::IniFiles', (-file=>$_[0]); return \%ini; }
 sub return_list { open my $fh, shift or die $!; return [<$fh>]; }
@@ -165,13 +175,13 @@ sub colon_sep {
     open IN, $file or die $!;
     my %config;
     while (<IN>) {
-        next if /^\s*#/;   
+        next if /^\s*#/;
         /^\s*(.*?)\s*:\s*(.*)/ or next;
         my ($k, $v) = ($1, $2);
         my @v;
         if ($v =~ /:/) {
             @v =  split /:/, $v;
-        } elsif ($v =~ /, /) { 
+        } elsif ($v =~ /, /) {
             @v = split /\s*,\s*/, $v;
         } elsif ($v =~ / /) {
             @v = split /\s+/, $v;
@@ -190,14 +200,14 @@ sub check_hash_and_assign {
     if (exists $c->{$k} and !ref $c->{$k}) {
         $c->{$k} = [$c->{$k}];
     }
-    
+
     if (grep /=/, @v) { # Bugger, it's really a hash
         for (@v) {
             my ($subkey, $subvalue);
             if (/(.*)=(.*)/) { ($subkey, $subvalue) = ($1,$2); }
             else { $subkey = $1; $subvalue = 1; }
 
-            if (exists $c->{$k} and ref $c->{$k} ne "HASH") { 
+            if (exists $c->{$k} and ref $c->{$k} ne "HASH") {
                 # Can we find a hash in here?
                 my $h=undef;
                 for (@{$c->{$k}}) {
@@ -206,16 +216,16 @@ sub check_hash_and_assign {
                 if ($h) { $h->{$subkey} = $subvalue; }
                 else { push @{$c->{$k}}, { $subkey => $subvalue } }
             } else {
-                $c->{$k}{$subkey} = $subvalue; 
-            } 
+                $c->{$k}{$subkey} = $subvalue;
+            }
         }
     } elsif (@v == 1) {
-        if (exists $c->{$k}) { 
+        if (exists $c->{$k}) {
             if (ref $c->{$k} eq "HASH") { $c->{$k}{$v[0]} = 1; }
             else {push @{$c->{$k}}, @v}
         } else { $c->{$k} = $v[0]; }
     } else {
-        if (exists $c->{$k}) { 
+        if (exists $c->{$k}) {
             if (ref $c->{$k} eq "HASH") { $c->{$k}{$_} = 1 for @v }
             else {push @{$c->{$k}}, @v }
         }
@@ -230,7 +240,7 @@ sub equal_sep {
     my %config;
     while (<IN>) {
         next if /^\s*#/;
-        /^\s*(.*?)\s*=\s*(.*)\s*$/ or next; 
+        /^\s*(.*?)\s*=\s*(.*)\s*$/ or next;
         my ($k, $v) = ($1, $2);
         my @v;
         if ($v=~ /,/) {
@@ -241,7 +251,7 @@ sub equal_sep {
             $config{$k} = $v;
         }
     }
-    
+
     return \%config;
 }
 
@@ -251,7 +261,7 @@ sub space_sep {
     my %config;
     while (<IN>) {
         next if /^\s*#/;
-        /\s*(\S+)\s+(.*)/ or next; 
+        /\s*(\S+)\s+(.*)/ or next;
         my ($k, $v) = ($1, $2);
         my @v;
         if ($v=~ /,/) {
@@ -291,7 +301,7 @@ Config::Auto - Magical config file parser
 =head1 DESCRIPTION
 
 This module was written after having to write Yet Another Config File Parser
-for some variety of colon-separated config. I decided "never again". 
+for some variety of colon-separated config. I decided "never again".
 
 When you call C<Config::Auto::parse> with no arguments, we first look at
 C<$0> to determine the program's name. Let's assume that's C<snerk>. We
@@ -308,12 +318,12 @@ look for the following files:
     snerkrc
     ~/snerkrc
     /etc/snerkrc
-    /usr/local/etc/snerkrc    
+    /usr/local/etc/snerkrc
     .snerkrc
     ~/.snerkrc
     /etc/.snerkrc
     /usr/local/etc/.snerkrc
-    
+
 We take the first one we find, and examine it to determine what format
 it's in. The algorithm used is a heuristic "which is a fancy way of
 saying that it doesn't work." (Mark Dominus.) We know about colon
@@ -323,6 +333,15 @@ you can force it with the C<format> option.
 
 If you don't want it ever to detect and execute config files which are made
 up of Perl code, set C<$Config::Auto::DisablePerl = 1>.
+
+When using the perl format, your configuration file will be eval'd. This will
+cause taint errors. To avoid these warnings, set C<$Config::Auto::Untaint = 1>.
+
+When using the perl format, your configuration file will be eval'd using
+do(file). This will cause taint errors if the filename is not untainted. To
+avoid these warnings, set C<$Config::Auto::Untaint = 1>. This setting will not
+untaint the data in your configuration file and should only be used if you
+trust the source of the filename.
 
 Then the file is parsed and a data structure is returned. Since we're
 working magic, we have to do the best we can under the circumstances -
@@ -370,7 +389,7 @@ F</etc/nsswitch.conf>:
 =head1 PARAMETERS
 
 Although C<Config::Auto> is at its most magical when called with no parameters,
-its behavior can be reigned in by use of one or two arguments.
+its behavior can be reined in by use of one or two arguments.
 
 If a filename is passed as the first argument to C<parse>, the same paths are
 checked, but C<Config::Auto> will look for a file with the passed name instead
@@ -389,6 +408,43 @@ The above call will cause C<Config::Auto> to look for:
 Parameters after the first are named, and the only recognize named parameter is
 C<format>, which forces C<Config::Auto> to interpret the contents of the
 configuration file in the given format without trying to guess.
+
+=head2 Formats
+
+C<Config::Auto> recognizes the following formats:
+
+=over 4
+
+=item * Perl    => perl code
+
+=item * colon   => colon separated (e.g., key:value)
+
+=item * space   => space separated (e.g., key value)
+
+=item * equal   => equal separated (e.g., key=value)
+
+=item * bind    => bind style (not available)
+
+=item * irssi   => irssi style (not available)
+
+=item * xml     => xml (via XML::Simple)
+
+=item * ini     => .ini format (via Config::IniFiles)
+
+=item * list    => list (e.g., ??)
+
+=back
+
+
+=head1 TROUBLESHOOTING
+
+=over 4
+
+=item When using a Perl config file, the configuration is borked
+
+Give C<Config::Auto> more hints (e.g., add #!/usr/bin/perl to beginning of
+file) or indicate the format in the parse() command.
+
 
 =head1 TODO
 
