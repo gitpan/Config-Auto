@@ -1,5 +1,8 @@
 Revision history for Perl extension Config::Auto.
 
+0.03  Sun Aug  4 09:51:42 BST 2002
+    - INI files patch by Garrett Rooney
+
 0.02  Thu Jul  4 17:20:13 BST 2002
     - I always screw up the README.
 

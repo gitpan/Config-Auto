@@ -6,7 +6,7 @@
 # change 'tests => 1' to 'tests => last_test_to_print';
 
 use Test;
-BEGIN { plan tests => 13 };
+BEGIN { plan tests => 18 };
 use Config::Auto;
 ok(1); # If we made it this far, we're ok.
 
@@ -83,3 +83,18 @@ ok($c->{quux} eq "zoop");
 ok(ref $c->{test} eq "HASH");
 ok($c->{test}{foo} eq "bar");
 ok($c->{test}{baz} == 1);
+
+$c = t(<<EOF);
+[group1]
+host = proxy.some-domain-name.com
+port = 80
+username = blah
+password = doubleblah
+EOF
+
+ok(ref $c->{"group1"} eq "HASH");
+ok($c->{"group1"}{"host"} eq "proxy.some-domain-name.com");
+ok($c->{"group1"}{"port"} eq "80");
+ok($c->{"group1"}{"username"} eq "blah");
+ok($c->{"group1"}{"password"} eq "doubleblah");
+

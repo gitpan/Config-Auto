@@ -8,7 +8,7 @@ use XML::Simple;
 use Config::IniFiles;
 use Carp;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 our $DisablePerl = 0;
 
 my %methods = (
@@ -131,6 +131,7 @@ sub find_file {
 
 sub eval_perl { do $_[0]; }
 sub parse_xml { return XMLin(shift); }
+sub parse_ini { tie my %ini, 'Config::IniFiles', (-file=>$_[0]); return \%ini; }
 sub return_list { open my $fh, shift or die $!; return [<$fh>]; }
 
 sub bind_style { croak "BIND8-style config not supported in this release" }
