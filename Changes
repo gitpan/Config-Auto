@@ -1,3 +1,11 @@
+0.13    Tue Jul 26 16:35:37 2005
+================================
+    - Add optional path support
+    - update test suite to test::more
+    - split tests by different formats
+    - Patch supplied by ssoriche@coloredblocks.net, tweaked and applied
+
+
 0.12    Thu Mar 10 14:58:06 2005
 ================================
     - extend do() diagnostics for perl files

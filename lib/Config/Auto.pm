@@ -8,9 +8,9 @@ use File::Basename;
 use Config::IniFiles;
 use Carp;
 
-use vars qw[$VERSION $DisablePerl $Untaint];
+use vars qw[$VERSION $DisablePerl $Untaint $Format];
 
-$VERSION = '0.12';
+$VERSION = '0.13';
 $DisablePerl = 0;
 $Untaint = 0;
 
@@ -33,8 +33,8 @@ sub parse {
     my $file = shift;
     my %args = @_;
 
-    $file = find_file($file)                if not defined $file or
-                                               not -e $file;
+    $file = find_file($file,$args{path})    if not defined $file or 
+                                                not -e $file;
     croak "No config file found!"           if not defined $file;
     croak "Config file $file not readable!" if not -e $file;
 
@@ -71,6 +71,8 @@ sub parse {
             if not exists $methods{$args{format}};
         $method = $args{format};
     }
+
+    $Format = $method;
     return $methods{$method}->($file);
 }
 
@@ -131,23 +133,41 @@ sub score {
 }
 
 sub find_file {
+    my($file,$path) = @_;
+
     my $x;
     my $whoami = basename($0);
     my $bindir = dirname($0);
-    $whoami =~ s/\.pl$//;
 
-    my @options = shift ||
-                    ("${whoami}config", "${whoami}.config",
-                     "${whoami}rc", ".${whoami}rc");
+   $whoami =~ s/\.(pl|t)$//;
+ 
+   my @filenames = $file ||
+                     ("${whoami}config", "${whoami}.config", 
+                      "${whoami}rc", ".${whoami}rc");
 
-    for (@options) {
-        return $_                   if -e $_;
-        return $x                   if -e ($x=catfile($bindir,$_));
-        return $x                   if -e ($x=catfile($ENV{HOME},$_));
-        return "/etc/$_"            if -e "/etc/$_";
-        return "/usr/local/etc/$_"  if -e "/usr/local/etc/$_";
+
+   foreach my $filename (@filenames) {
+       return $filename            if -e $filename;
+       return $x                   if -e ($x = _chkpaths($path,$filename));
+       return $x                   if -e ($x = catfile($bindir,$filename));
+       return $x                   if -e ($x = catfile($ENV{HOME},$filename));
+       return "/etc/$_"            if -e "/etc/$filename";
+       return "/usr/local/etc/$_"  if -e "/usr/local/etc/$filename";
     }
     return undef;
+}
+
+sub _chkpaths {
+    my ($paths,$filename)=@_;
+    my $file;
+
+    if(ref($paths) eq 'ARRAY') {
+        foreach my $path (@$paths) {
+            return $file        if -e ($file = catfile($path,$filename));
+        }
+    } else {
+        return $file            if -e ($file = catfile($paths,$filename));
+    }    
 }
 
 sub eval_perl   {
@@ -324,6 +344,8 @@ look for the following files:
     /etc/.snerkrc
     /usr/local/etc/.snerkrc
 
+Additional search paths can be specified with the C<paths> option.
+
 We take the first one we find, and examine it to determine what format
 it's in. The algorithm used is a heuristic "which is a fancy way of
 saying that it doesn't work." (Mark Dominus.) We know about colon
@@ -405,9 +427,18 @@ The above call will cause C<Config::Auto> to look for:
  ~/obscure.conf
  /etc/obscure.conf
 
-Parameters after the first are named, and the only recognize named parameter is
-C<format>, which forces C<Config::Auto> to interpret the contents of the
+Parameters after the first are named.
+
+=head2 C<format> 
+
+forces C<Config::Auto> to interpret the contents of the
 configuration file in the given format without trying to guess.
+ 
+=head2 C<path>
+
+add additional directories to the search paths. The current directory
+is searched first, then the paths specified with the path parameter.
+C<path> can either be a scalar or a reference to an array of paths to check.
 
 =head2 Formats
 
