@@ -10,7 +10,7 @@ use Carp;
 
 use vars qw[$VERSION $DisablePerl $Untaint $Format];
 
-$VERSION = '0.13';
+$VERSION = '0.14';
 $DisablePerl = 0;
 $Untaint = 0;
 
@@ -68,8 +68,8 @@ sub parse {
         $method = $methods[0];
     } else {
         croak "Unknown format $args{format}: use one of @{[ keys %methods ]}"
-            if not exists $methods{$args{format}};
-        $method = $args{format};
+            if not exists $methods{ lc $args{format} };
+        $method = lc $args{format};
     }
 
     $Format = $method;
@@ -147,12 +147,13 @@ sub find_file {
 
 
    foreach my $filename (@filenames) {
-       return $filename            if -e $filename;
-       return $x                   if -e ($x = _chkpaths($path,$filename));
-       return $x                   if -e ($x = catfile($bindir,$filename));
-       return $x                   if -e ($x = catfile($ENV{HOME},$filename));
-       return "/etc/$_"            if -e "/etc/$filename";
-       return "/usr/local/etc/$_"  if -e "/usr/local/etc/$filename";
+       return $filename        if -e $filename;
+       return $x               if ($x = _chkpaths($path,$filename)) and -e $x;
+       return $x               if -e ($x = catfile($bindir,$filename));
+       return $x               if -e ($x = catfile($ENV{HOME},$filename));
+       return "/etc/$filename" if -e "/etc/$filename";
+       return "/usr/local/etc/$filename"  
+                               if -e "/usr/local/etc/$filename";
     }
     return undef;
 }
@@ -161,13 +162,20 @@ sub _chkpaths {
     my ($paths,$filename)=@_;
     my $file;
 
-    if(ref($paths) eq 'ARRAY') {
-        foreach my $path (@$paths) {
-            return $file        if -e ($file = catfile($path,$filename));
+    if ($paths) {
+
+        if(ref($paths) eq 'ARRAY') {
+            foreach my $path (@$paths) {
+                return $file if -e ($file = catfile($path,$filename));
+            }
+            
+        } else {
+            return $file     if -e ($file = catfile($paths,$filename));
         }
+    
     } else {
-        return $file            if -e ($file = catfile($paths,$filename));
-    }    
+        return undef;
+    }
 }
 
 sub eval_perl   {
@@ -446,7 +454,7 @@ C<Config::Auto> recognizes the following formats:
 
 =over 4
 
-=item * Perl    => perl code
+=item * perl    => perl code
 
 =item * colon   => colon separated (e.g., key:value)
 
@@ -476,6 +484,7 @@ C<Config::Auto> recognizes the following formats:
 Give C<Config::Auto> more hints (e.g., add #!/usr/bin/perl to beginning of
 file) or indicate the format in the parse() command.
 
+=back
 
 =head1 TODO
 

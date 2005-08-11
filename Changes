@@ -1,3 +1,12 @@
+0.14    Thu Aug 11 16:27:50 2005
+================================
+    - Fix uninitialized value warning
+    - Fix pod error
+    - Files under /etc we're not properly detected
+    - Fix casing of 'perl' in the Formats section of the pod
+    - Make formats be accepted in any casing
+
+
 0.13    Tue Jul 26 16:35:37 2005
 ================================
     - Add optional path support
