@@ -10,7 +10,7 @@ use Carp;
 
 use vars qw[$VERSION $DisablePerl $Untaint $Format];
 
-$VERSION = '0.14';
+$VERSION = '0.15_01';
 $DisablePerl = 0;
 $Untaint = 0;
 
@@ -24,6 +24,7 @@ my %methods = (
     xml    => \&parse_xml,
     ini    => \&parse_ini,
     list   => \&return_list,
+    yaml   => \&yaml,
 );
 
 delete $methods{'xml'}
@@ -83,6 +84,9 @@ sub score {
     my %score;
 
     for (@$data_r) {
+        ### it's almost definately YAML if the first line matches this
+        $score{yaml} += 20              if /--- #YAML:/ and $data_r->[0] eq $_;
+    
         # Easy to comment out foo=bar syntax
         $score{equal}++                 if /^\s*#\s*\w+\s*=/;
         next if /^\s*#/;
@@ -189,8 +193,10 @@ sub eval_perl   {
 }
 
 sub parse_xml   { return XMLin(shift); }
-sub parse_ini   { tie my %ini, 'Config::IniFiles', (-file=>$_[0]); return \%ini; }
+sub parse_ini   { tie my %ini, 'Config::IniFiles', (-file=>$_[0]); 
+                    return \%ini; }
 sub return_list { open my $fh, shift or die $!; return [<$fh>]; }
+sub yaml        { require YAML; return YAML::LoadFile( shift ) }
 
 sub bind_style  { croak "BIND8-style config not supported in this release" }
 sub irssi_style { croak "irssi-style config not supported in this release" }
