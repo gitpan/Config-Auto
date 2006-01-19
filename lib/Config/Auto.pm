@@ -10,7 +10,7 @@ use Carp;
 
 use vars qw[$VERSION $DisablePerl $Untaint $Format];
 
-$VERSION = '0.15_01';
+$VERSION = '0.16';
 $DisablePerl = 0;
 $Untaint = 0;
 
@@ -478,8 +478,9 @@ C<Config::Auto> recognizes the following formats:
 
 =item * list    => list (e.g., ??)
 
-=back
+=item * yaml    => yaml (via YAML.pm)
 
+=back
 
 =head1 TROUBLESHOOTING
 
@@ -504,7 +505,7 @@ This module by Jos Boumans, C<kane@cpan.org>.
 =head1 LICENSE
 
 This module is
-copyright (c) 2003 Jos Boumans E<lt>kane@cpan.orgE<gt>.
+copyright (c) 2003-2006 Jos Boumans E<lt>kane@cpan.orgE<gt>.
 All rights reserved.
 
 This library is free software;
