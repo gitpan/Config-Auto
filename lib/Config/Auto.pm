@@ -10,7 +10,7 @@ use Carp;
 
 use vars qw[$VERSION $DisablePerl $Untaint $Format];
 
-$VERSION = '0.16';
+$VERSION = '0.17';
 $DisablePerl = 0;
 $Untaint = 0;
 
@@ -198,7 +198,159 @@ sub parse_ini   { tie my %ini, 'Config::IniFiles', (-file=>$_[0]);
 sub return_list { open my $fh, shift or die $!; return [<$fh>]; }
 sub yaml        { require YAML; return YAML::LoadFile( shift ) }
 
-sub bind_style  { croak "BIND8-style config not supported in this release" }
+#
+# Parse bind-style config files, should work with bind versions 8/9.
+# Parser is far from perfect. Still doesn't parse single line blocks.
+#
+sub bind_style {
+    my $file = $_[0];
+    open IN, $file or die("Can't open file $file: $!");
+    my %config;
+
+    # Define parser stacks for block names and block options
+    my $block_name = '';
+    my $block_opts = \%config;
+    my @block_stack = ( $block_name );
+    my @block_opt_stack = ( $block_opts );
+    my @values;
+
+    #
+    # Compile regex objects for parsing
+    # This is a *simple* parsing that for now is not supposed to work
+    # with every single bind style config file.
+    #
+    my %rx = (
+        blank         => qr/^\s*(#|\/\/)/,                  # (either in sh or c++ style)
+        include       => qr/^\s*include\s*"(.*)";\s*/,
+        block_opening => qr/^\s*(.+)\s*{\s*/,
+        block_closing => qr/^\s*}\s*;?\s*/,
+        option        => qr/^\s*([^\s]+)\s*(.+)\s*;\s*/,
+        value         => qr/^\s*([^\s]+)\s*;\s*/,
+        zone          => qr/zone\s*"?([^\s"]+)"?\s*/,
+    );
+
+    while (<IN>)
+    {
+
+        #warn('   --- ' . $_);
+
+        # Skip blanks and comments
+        next if $_ =~ $rx{blank};
+
+        # Parse "include" directives
+        # For now we don't preprocess include files. Should we?
+        if( $_ =~ $rx{include} )
+        {
+            $config{include} ||= [];
+            push @{ $config{include} }, $1;
+            #warn('Found include '.$1);
+        }
+
+        elsif( $_ =~ $rx{block_opening} )
+        {
+            # Start with a new block without options
+            unshift @block_stack,     $block_name;
+            unshift @block_opt_stack, $block_opts;
+
+            $block_opts = {};
+            $block_name = $1;
+            
+            for( $block_name )         # Trim block name
+            {
+                s/\s*$//;
+                s/^\s*//;
+            }
+
+            #warn('Opening block `'.$block_name.'\'');
+        }
+
+        #
+        # In this way (elsif), we're not going to parse correctly the
+        # configuration directives that are written on a single line
+        # ex.: `forwarders { 192.168.0.1; };'
+        #
+        elsif( $_ =~ $rx{block_closing} )
+        {
+
+            # Special handling for bind "zone" blocks
+            if( $block_name =~ $rx{zone} )
+            {
+                my $zone_name = $1;
+                $config{zones}->{$zone_name} = { %$block_opts };
+            }
+            else
+            {
+
+                my $parent_block_opts = $block_opt_stack[0];
+
+                # If we have only list values (ex.: `forwarders { a; b; c; };')
+                if( @values && !%$block_opts )
+                {
+                    $parent_block_opts->{$block_name} = [ @values ];
+                }
+
+                # Or if we have values *and* options (ex.: `masters { a; type slave; };')
+                elsif( @values && %$block_opts )
+                {
+                    $parent_block_opts->{$block_name}->{values}  = [ @values ];
+                    $parent_block_opts->{$block_name}->{options} = { %$block_opts };
+                }
+
+                # ... only options
+                else
+                {
+                    $parent_block_opts->{$block_name} = { %$block_opts };
+                }
+
+                # If block name is not defined, we don't want to add a "root" block key
+                if( $block_stack[0] )
+                {
+                    $config{$block_stack[0]} = $parent_block_opts;
+                }
+            }
+
+            # Closing current block. Shift up the stack of 1 block and proceed
+            @values     = ();
+            $block_name = shift @block_stack;
+            $block_opts = shift @block_opt_stack;
+
+            #warn('Closing block `'.$block_name.'\'');
+        }
+
+        # Single value on a line
+        elsif( $_ =~ $rx{value} )
+        {
+            push @values, $1;
+        }
+
+        # Option with keyword + value
+        elsif( $_ =~ $rx{option} )
+        {
+            #warn('Found option `'.$1.'\' with value `'.$2.'\'');
+            my($opt_name, $opt_value) = ($1, $2);
+            for( $opt_name, $opt_value )
+            {
+                s/^\s*//;
+                s/\s*$//;
+            }
+
+            # Check how we can insert this option in the existing hash
+            # FIXME use check_hash_and_assign() ?
+            if( exists $block_opts->{$opt_name} ) {
+                if( ref $block_opts->{$opt_name} eq 'ARRAY' ) {
+                    push @{ $block_opts->{$opt_name} }, $opt_value;
+                } else {
+                    $block_opts->{$opt_name} = [ $block_opts->{$opt_name}, $opt_value ];
+                }
+            } else {
+                $block_opts->{$opt_name} = $opt_value;
+            }
+        }
+    }
+
+    return \%config;
+}
+
 sub irssi_style { croak "irssi-style config not supported in this release" }
 
 # BUG: These functions are too similar. How can they be unified?
@@ -495,8 +647,9 @@ file) or indicate the format in the parse() command.
 
 =head1 TODO
 
-BIND9 and irssi file format parsers currently don't exist. It would be
-good to add support for C<mutt> and C<vim> style C<set>-based RCs.
+Better BIND9 file format parser.
+irssi file format parser currently doesn't exist. It would be
+good to add support for "mutt" and "vim" style "set"-based RCs.
 
 =head1 AUTHOR
 

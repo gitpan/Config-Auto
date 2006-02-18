@@ -89,7 +89,8 @@ DESCRIPTION
         };
 
 TODO
-    BIND9 and irssi file format parsers currently don't exist. It would be
+    Better BIND9 file format parser.
+    irssi file format parser currently doesn't exist. It would be
     good to add support for "mutt" and "vim" style "set"-based RCs.
 
 AUTHOR

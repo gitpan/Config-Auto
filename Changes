@@ -1,3 +1,7 @@
+0.17    Wed Feb 15 15:02:00 2006
+================================
+    - Added minimal support for bind style config files
+
 0.15_01 Thu Aug 11 17:00:50 2005
 ================================
     - Added experimental YAML support
