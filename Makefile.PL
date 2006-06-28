@@ -15,9 +15,11 @@ if( !$have_xml_simple and !$opts->{'x'} ) {
 }
 
 my $prereqs = {
-    'XML::Simple'       => 0,
-    'YAML'              => 0,
-    'Config::IniFiles'  => 0,
+    'XML::Simple'           => 0,
+    'YAML'                  => 0,
+    'Config::IniFiles'      => 0,
+    'File::Spec::Functions' => 0,
+    'Test::More'            => 0,
 };
 delete $prereqs->{'XML::Simple'} unless $opts->{'x'};             
 
@@ -26,7 +28,7 @@ WriteMakefile(
     'VERSION_FROM'	    => 'lib/Config/Auto.pm', # finds $VERSION
     'PREREQ_PM'		    => $prereqs, 
     ( $] >= 5.005 
-        ? ( ABSTRACT_FROM    => 'lib/Config/Auto.pm', # retrieve abstract from module
+        ? ( ABSTRACT_FROM    => 'lib/Config/Auto.pm', 
             AUTHOR           => 'Jos I. Boumans <kane@cpan.org>') 
         : ()
     ),

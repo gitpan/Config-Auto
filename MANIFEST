@@ -2,7 +2,6 @@ Changes
 lib/Config/Auto.pm
 Makefile.PL
 MANIFEST			This list of files
-META.yml			Module meta-data (added by MakeMaker)
 README
 t/00.load.t
 t/colon.t
@@ -10,19 +9,17 @@ t/config/colon.conf
 t/config/config.xml
 t/config/config.yml
 t/config/deb.conf
-t/config/named.conf
 t/config/nsswitch.conf
 t/config/passwd
 t/config/resolv.conf
-t/config/vtund.conf
 t/config/win.ini
 t/debconf.t
-t/named.t
 t/nsswitch.t
 t/passwd.t
 t/pod.t
 t/resolv.t
-t/vtund.t
 t/winini.t
+t/xml-unavailable.t
 t/xml.t
 t/yaml.t
+META.yml                                 Module meta-data (added by MakeMaker)

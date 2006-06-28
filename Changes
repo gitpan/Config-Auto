@@ -1,6 +1,13 @@
-0.17    Wed Feb 15 15:02:00 2006
+0.18    Wed Jun 28 12:22:29 2006
 ================================
-    - Added minimal support for bind style config files
+    - Address #19938 which states that calling parse()
+      on an xml config without XML::Simple installed
+      dies ungracefully. As of this version, better
+      diagnostics will be provided.
+
+0.17    Tue May  2 14:41:18 2006
+================================
+    - Improved YAML autodetection [#18241]
 
 0.15_01 Thu Aug 11 17:00:50 2005
 ================================
