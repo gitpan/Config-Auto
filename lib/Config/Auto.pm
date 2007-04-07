@@ -10,7 +10,7 @@ use Carp;
 
 use vars qw[$VERSION $DisablePerl $Untaint $Format];
 
-$VERSION = '0.18';
+$VERSION = '0.20';
 $DisablePerl = 0;
 $Untaint = 0;
 
@@ -56,15 +56,15 @@ sub parse {
     if (!defined $args{format}) {
         # OK, let's take a look at you.
         my @data;
-        open CONFIG, $file or croak "$file: $!";
+        open my $config, $file or croak "$file: $!";
         if (-s $file > 1024*100) {
             # Just read in a bit.
-            while (<CONFIG>) {
+            while (<$config>) {
                 push @data, $_;
                 last if $. >= 50;
             }
         } else {
-            @data = <CONFIG>;
+            @data = <$config>;
         }
         my %scores = score(\@data);
 
@@ -221,9 +221,9 @@ sub irssi_style { croak "irssi-style config not supported in this release" }
 sub colon_sep {
 
     my $file = shift;
-    open IN, $file or die $!;
+    open my $in, $file or die $!;
     my %config;
-    while (<IN>) {
+    while (<$in>) {
         next if /^\s*#/;
         /^\s*(.*?)\s*:\s*(.*)/ or next;
         my ($k, $v) = ($1, $2);
@@ -285,9 +285,9 @@ sub check_hash_and_assign {
 
 sub equal_sep {
     my $file = shift;
-    open IN, $file or die $!;
+    open my $in, $file or die $!;
     my %config;
-    while (<IN>) {
+    while (<$in>) {
         next if /^\s*#/;
         /^\s*(.*?)\s*=\s*(.*)\s*$/ or next;
         my ($k, $v) = ($1, $2);
@@ -306,9 +306,9 @@ sub equal_sep {
 
 sub space_sep {
     my $file = shift;
-    open IN, $file or die $!;
+    open my $in, $file or die $!;
     my %config;
-    while (<IN>) {
+    while (<$in>) {
         next if /^\s*#/;
         /\s*(\S+)\s+(.*)/ or next;
         my ($k, $v) = ($1, $2);
@@ -513,18 +513,17 @@ file) or indicate the format in the parse() command.
 BIND9 and irssi file format parsers currently don't exist. It would be
 good to add support for C<mutt> and C<vim> style C<set>-based RCs.
 
+=head1 BUG REPORTS
+
+Please report bugs or other issues to E<lt>bug-config-auto@rt.cpan.orgE<gt>.
+
 =head1 AUTHOR
 
-This module by Jos Boumans, C<kane@cpan.org>.
+This module by Jos Boumans E<lt>kane@cpan.orgE<gt>.
 
-=head1 LICENSE
+=head1 COPYRIGHT
 
-This module is
-copyright (c) 2003-2006 Jos Boumans E<lt>kane@cpan.orgE<gt>.
-All rights reserved.
-
-This library is free software;
-you may redistribute and/or modify it under the same
-terms as Perl itself.
+This library is free software; you may redistribute and/or modify it 
+under the same terms as Perl itself.
 
 =cut
