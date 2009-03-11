@@ -3,23 +3,13 @@ lib/Config/Auto.pm
 Makefile.PL
 MANIFEST			This list of files
 README
-t/00.load.t
-t/colon.t
-t/config/colon.conf
-t/config/config.xml
-t/config/config.yml
-t/config/deb.conf
-t/config/nsswitch.conf
-t/config/passwd
-t/config/resolv.conf
-t/config/win.ini
-t/debconf.t
-t/nsswitch.t
-t/passwd.t
-t/pod.t
-t/resolv.t
-t/winini.t
-t/xml-unavailable.t
-t/xml.t
-t/yaml.t
+t/00_load.t
+t/01_OO.t
+t/02_parse.t
+t/03_invalid.t
+t/04_magic.t
+t/20_XML_unvailable.t
+t/99_pod.t
+t/lib/XML/Simple.pm
+t/src/04_magic.config
 META.yml                                 Module meta-data (added by MakeMaker)

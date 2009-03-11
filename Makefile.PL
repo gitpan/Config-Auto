@@ -16,10 +16,13 @@ if( !$have_xml_simple and !$opts->{'x'} ) {
 
 my $prereqs = {
     'XML::Simple'           => 0,
-    'YAML'                  => 0,
+    'YAML'                  => 0.67,
     'Config::IniFiles'      => 0,
     'File::Spec::Functions' => 0,
     'Test::More'            => 0,
+    'Text::ParseWords'      => 0,
+    'File::Temp'            => 0,
+    'IO::String'            => 0,
 };
 delete $prereqs->{'XML::Simple'} unless $opts->{'x'};             
 
