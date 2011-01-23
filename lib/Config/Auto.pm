@@ -7,7 +7,7 @@ use Carp qw[croak];
 
 use vars qw[$VERSION $DisablePerl $Untaint $Debug];
 
-$VERSION        = '0.29_02';
+$VERSION        = '0.30';
 $DisablePerl    = 0;
 $Untaint        = 0;
 $Debug          = 0;
@@ -482,7 +482,7 @@ sub _find_file {
         return $name        if -e $name;
         return $try         if ( $try = $self->_chkpaths($path, $name) ) and -e $try;
         return $try         if -e ( $try = catfile($bindir,     $name) );
-        return $try         if -e ( $try = catfile($ENV{HOME},  $name) );
+        return $try         if $ENV{HOME} && -e ( $try = catfile($ENV{HOME},  $name) );
         return "/etc/$name" if -e "/etc/$name";
         return "/usr/local/etc/$name"  
                             if -e "/usr/local/etc/$name";
