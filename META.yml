@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Config-Auto
-version:            0.30
+version:            0.32
 abstract:           Magical config file parser
 author:
     - Jos I. Boumans <kane@cpan.org>
