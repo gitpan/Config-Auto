@@ -27,4 +27,4 @@ requires:
   YAML: 0.67
 resources:
   repository: https://github.com/jib/config-auto
-version: 0.40
+version: 0.42
